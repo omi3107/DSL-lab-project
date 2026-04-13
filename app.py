@@ -18,10 +18,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+import requests
 from config import (
     ALLOWED_EXTENSIONS, MAX_UPLOAD_SIZE_MB,
-    CONVERT_TO_PDF_EXTS
+    CONVERT_TO_PDF_EXTS, AUDIO_EXTENSIONS, ML_BACKEND_URL
 )
+from src.gemini_layer import refine_insights
 
 logger = logging.getLogger(__name__)
 
@@ -413,18 +415,18 @@ st.markdown("""
 st.markdown('<div class="upload-section">', unsafe_allow_html=True)
 
 # Mode toggle
-col_a, col_b = st.columns([1, 1])
+col_a, col_b = st.columns([1.2, 0.8])
 with col_a:
-    input_mode = st.radio("Input method", ["📄 Upload File", "📝 Paste Text"], horizontal=True, label_visibility="collapsed")
+    input_mode = st.radio("Input method", ["📄 File", "🎙️ Audio", "📝 Text"], horizontal=True, label_visibility="collapsed")
 
 st.markdown("---")
 
 transcript_text = ""
 uploaded_name   = ""
 
-if input_mode == "📄 Upload File":
+if input_mode == "📄 File":
     # Drop zone visual header
-    st.markdown("""
+    st.markdown(f"""
     <div style="border:2px dashed #252c3a;border-radius:14px;padding:2rem 1.5rem 1.5rem;background:#161a22;text-align:center;margin-bottom:0.75rem;">
       <span style="font-size:2.5rem;display:block;margin-bottom:0.8rem;">📂</span>
       <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:#e8ecf4;margin:0 0 0.3rem;">
@@ -436,7 +438,6 @@ if input_mode == "📄 Upload File":
         <span class="pill doc">DOC</span>
         <span class="pill docx">DOCX</span>
         <span class="pill" style="color:#8896b0;">TXT</span>
-        <span class="pill" style="color:#8896b0;">Max 10 MB</span>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -444,8 +445,7 @@ if input_mode == "📄 Upload File":
     uploaded = st.file_uploader(
         "Upload transcript",
         type=["pdf", "doc", "docx", "txt"],
-        label_visibility="collapsed",
-        help=f"Supported: PDF, DOC, DOCX, TXT · Max {MAX_UPLOAD_SIZE_MB} MB"
+        label_visibility="collapsed"
     )
 
     if uploaded is not None:
@@ -454,53 +454,63 @@ if input_mode == "📄 Upload File":
         icon     = get_file_icon(ext)
         needs_cv = ext in CONVERT_TO_PDF_EXTS
 
-        # File size guard
         if size_mb > MAX_UPLOAD_SIZE_MB:
-            st.markdown(f"""
-            <div class="alert alert-error">
-              ⚠️ File too large ({size_mb:.1f} MB). Maximum allowed size is {MAX_UPLOAD_SIZE_MB} MB.
-              Please compress or split the document.
-            </div>""", unsafe_allow_html=True)
+            st.markdown(f'<div class="alert alert-error">⚠️ File too large ({size_mb:.1f} MB). Max {MAX_UPLOAD_SIZE_MB} MB.</div>', unsafe_allow_html=True)
         else:
-            convert_html = ""
-            if needs_cv:
-                convert_html = f'<div class="convert-badge">🔄 Will be converted to PDF automatically</div>'
-
-            st.markdown(f"""
-            <div class="file-preview">
-              <div class="file-icon-box">{icon}</div>
-              <div class="file-meta">
-                <div class="file-name">{uploaded.name}</div>
-                <div class="file-size">{size_mb:.2f} MB &nbsp;·&nbsp; {ext.upper()}</div>
-                {convert_html}
-              </div>
-              <div class="file-status">✓ Ready</div>
-            </div>
-            """, unsafe_allow_html=True)
-
+            st.markdown(f'<div class="file-preview"><div class="file-icon-box">{icon}</div><div class="file-meta"><div class="file-name">{uploaded.name}</div><div class="file-size">{size_mb:.2f} MB · {ext.upper()}</div></div><div class="file-status">✓ Ready</div></div>', unsafe_allow_html=True)
             uploaded_name = uploaded.name
             file_bytes = uploaded.read()
 
-            # Extract text based on file type
             if ext == ".txt":
-                try:
-                    transcript_text = file_bytes.decode("utf-8")
-                except UnicodeDecodeError:
-                    st.markdown('<div class="alert alert-error">❌ Could not decode file. Please ensure it is UTF-8 encoded.</div>', unsafe_allow_html=True)
+                try: transcript_text = file_bytes.decode("utf-8")
+                except: st.markdown('<div class="alert alert-error">❌ Encoding error.</div>', unsafe_allow_html=True)
             elif ext == ".pdf":
-                with st.spinner("📄 Extracting text from PDF…"):
-                    transcript_text = extract_text_from_pdf(file_bytes)
+                with st.spinner("📄 Extracting PDF text..."): transcript_text = extract_text_from_pdf(file_bytes)
             elif ext in (".doc", ".docx"):
-                with st.spinner("🔄 Converting DOC/DOCX and extracting text…"):
-                    transcript_text = extract_text_from_docx(file_bytes)
+                with st.spinner("🔄 Extracting DOCX text..."): transcript_text = extract_text_from_docx(file_bytes)
 
-            if transcript_text.strip():
-                st.markdown(f"""
-                <div class="alert alert-success">
-                  ✅ Successfully loaded <strong>{uploaded.name}</strong> &nbsp;·&nbsp; {len(transcript_text):,} characters extracted
-                </div>""", unsafe_allow_html=True)
-            elif file_bytes:
-                st.markdown('<div class="alert alert-warning">⚠️ File loaded but no text could be extracted. Check that the file is not scanned/image-only.</div>', unsafe_allow_html=True)
+elif input_mode == "🎙️ Audio":
+    st.markdown(f"""
+    <div style="border:2px dashed #252c3a;border-radius:14px;padding:2rem 1.5rem 1.5rem;background:#161a22;text-align:center;margin-bottom:0.75rem;">
+      <span style="font-size:2.5rem;display:block;margin-bottom:0.8rem;">🎙️</span>
+      <h3 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:#e8ecf4;margin:0 0 0.3rem;">
+        Upload Audio Recording
+      </h3>
+      <p style="color:#8896b0;font-size:0.83rem;margin:0 0 1rem;">Processed via Whisper ML Backend</p>
+      <div class="format-pills" style="display:flex;justify-content:center;gap:0.4rem;">
+        <span class="pill" style="color:var(--accent); border-color:var(--accent);">WAV</span>
+        <span class="pill" style="color:var(--accent); border-color:var(--accent);">MP3</span>
+        <span class="pill" style="color:var(--accent); border-color:var(--accent);">M4A</span>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    uploaded_audio = st.file_uploader(
+        "Upload audio",
+        type=[ext.strip(".") for ext in AUDIO_EXTENSIONS],
+        label_visibility="collapsed"
+    )
+
+    if uploaded_audio:
+        st.audio(uploaded_audio)
+        if st.button("✨ Transcribe Audio"):
+            with st.spinner("🧠 Whisper is transcribing... (this may take a minute)"):
+                try:
+                    files = {"file": (uploaded_audio.name, uploaded_audio, uploaded_audio.type)}
+                    resp = requests.post(f"{ML_BACKEND_URL}/api/v1/transcribe", files=files, timeout=300)
+                    if resp.status_code == 200:
+                        transcript_text = resp.json().get("text", "")
+                        st.markdown(f'<div class="alert alert-success">✅ Transcription complete! {len(transcript_text)} chars.</div>', unsafe_allow_html=True)
+                        st.session_state["audio_transcript"] = transcript_text
+                    else:
+                        st.error(f"Backend Error: {resp.text}")
+                except Exception as e:
+                    st.error(f"Could not connect to ML Backend: {e}")
+
+    if "audio_transcript" in st.session_state:
+        transcript_text = st.session_state["audio_transcript"]
+        with st.expander("📝 View Transcription"):
+            st.write(transcript_text)
 
 else:
     transcript_text = st.text_area(
@@ -653,15 +663,36 @@ if analyse_clicked:
             items  = "".join(f"<li>{i}</li>" for i in issues) if issues else "<li><em>None detected</em></li>"
             st.markdown(f'<div class="insight-card"><div class="insight-card-header"><span class="card-icon">⚠️</span><h3>Open Issues</h3></div><ul>{items}</ul></div>', unsafe_allow_html=True)
 
+        # ── Gemini Reframing Layer ───────────────────────
+        st.markdown("### ✨ Gemini AI Insights")
+        if st.button("🪄 Refine Analysis with Gemini"):
+            with st.spinner("Gemini is polishing your report..."):
+                refined_report = refine_insights(insights)
+                st.session_state["gemini_report"] = refined_report
+
+        if "gemini_report" in st.session_state:
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #1a2333 0%, #161a22 100%); border: 1px solid #2a3448; border-radius: 16px; padding: 2rem; margin-top: 1rem; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+              <div style="display: flex; align-items: center; margin-bottom: 1.5rem;">
+                <span style="font-size: 1.5rem; margin-right: 0.75rem;">✨</span>
+                <h3 style="margin: 0; color: #fff; font-family: 'Syne', sans-serif;">Gemini Refined Report</h3>
+                <span style="background: #a855f7; color: #fff; font-size: 0.65rem; padding: 2px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase; margin-left: 1rem;">Premium</span>
+              </div>
+              <div style="color: #cbd5e1; line-height: 1.6; font-size: 0.95rem;">
+                {st.session_state["gemini_report"]}
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
         # ── Export ───────────────────────────────────────
         st.markdown("<hr>", unsafe_allow_html=True)
         json_str = insights_to_json(insights)
         dl_col, _ = st.columns([1, 2])
         with dl_col:
-            st.download_button("📥 Download Insights (JSON)", data=json_str,
+            st.download_button("📥 Download Raw Insights (JSON)", data=json_str,
                                file_name="meeting_insights.json", mime="application/json",
                                use_container_width=True)
-        with st.expander("🔍 View Raw JSON"):
+        with st.expander("🔍 View Raw Analysis JSON"):
             st.json(json.loads(json_str))
 
         st.markdown('</div>', unsafe_allow_html=True)

@@ -1,0 +1,11 @@
+{
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Windows",
+  "extraPaths": [
+    ".",
+    "./ml_backend",
+    "./src"
+  ],
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "none"
+}

@@ -65,6 +65,10 @@ ALLOWED_MIME_TYPES  = {
 # Extensions that require conversion to PDF before OCR/text extraction
 CONVERT_TO_PDF_EXTS = [".doc", ".docx"]
 
+# ── Audio Upload ─────────────────────────────────────────
+AUDIO_EXTENSIONS    = [".mp3", ".wav", ".m4a", ".ogg", ".flac"]
+ML_BACKEND_URL      = "http://localhost:8000"
+
 # ── Logging ──────────────────────────────────────────────
 LOG_LEVEL  = logging.INFO
 LOG_FORMAT = "%(asctime)s | %(name)-20s | %(levelname)-7s | %(message)s"

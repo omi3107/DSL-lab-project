@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+torch
+transformers
+nltk
+spacy
+scikit-learn
+accelerate
+peft
+evaluate
+datasets
+librosa
+jiwer
+rouge-score
+seqeval
+jupyter
