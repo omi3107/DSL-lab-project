@@ -27,6 +27,9 @@ import sys
 import time
 from pathlib import Path
 
+if sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # ---------------------------------------------------------------------------
 # Path bootstrap — works whether run from repo root, training/ dir, or Colab
 # ---------------------------------------------------------------------------
@@ -291,9 +294,9 @@ def run_pipeline(dataset_path: str | Path | None = None) -> dict:
         Dictionary of evaluation metrics.
     """
     start = time.time()
-    print("\n" + "█" * 60)
+    print("\n" + "=" * 60)
     print("  MeetingMind-AI — Baseline SVM Training Pipeline")
-    print("█" * 60 + "\n")
+    print("=" * 60 + "\n")
 
     # ── 1. Load ────────────────────────────────────────────────────────────
     df = load_dataset(dataset_path or DATASET_PATH)
@@ -412,13 +415,13 @@ def run_pipeline(dataset_path: str | Path | None = None) -> dict:
 
     # ── Summary ────────────────────────────────────────────────────────────
     total_time = time.time() - start
-    print(f"\n{'█' * 60}")
+    print(f"\n{'=' * 60}")
     print(f"  Pipeline completed in {total_time:.1f}s")
     print(f"  Accuracy : {metrics['accuracy']:.4f}")
     print(f"  F1 Macro : {metrics['f1_macro']:.4f}")
     print(f"  Artifacts: {SAVE_DIR}")
     print(f"  Results  : {RESULTS_DIR}")
-    print(f"{'█' * 60}\n")
+    print(f"{'=' * 60}\n")
 
     return metrics
 

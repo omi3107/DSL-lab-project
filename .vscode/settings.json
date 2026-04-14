@@ -1,8 +1,6 @@
 {
   "python.analysis.extraPaths": [
-    ".",
-    "./ml-backend",
-    "./src"
+    "./backend/ml_model"
   ],
   "python.analysis.autoSearchPaths": true,
   "python.analysis.diagnosticSeverityOverrides": {

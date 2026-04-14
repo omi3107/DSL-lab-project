@@ -3,7 +3,7 @@
   "pythonPlatform": "Windows",
   "extraPaths": [
     ".",
-    "./ml_backend",
+    "./backend/ml_model",
     "./src"
   ],
   "reportMissingImports": "warning",
