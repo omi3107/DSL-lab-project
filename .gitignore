@@ -1,46 +1,75 @@
+# ----------------------
 # Python
+# ----------------------
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 *.egg-info/
 .Python
 build/
 dist/
 
+# ----------------------
 # Virtual Environments
+# ----------------------
 .venv/
 venv/
 env/
-.env
 
-# IDE
+# ----------------------
+# Environment Variables (IMPORTANT 🔐)
+# ----------------------
+.env
+.env.*
+*.env
+.env.local
+.env.development
+.env.production
+
+# ----------------------
+# IDE / Editor
+# ----------------------
 .vscode/
 .idea/
 
+# ----------------------
 # Code Review Graph
+# ----------------------
 .code-review-graph/
 
+# ----------------------
 # ML/NLP Models & Data
+# ----------------------
 *.pt
 *.bin
 models/
 data/
 
+# ----------------------
 # Logs & Temp
+# ----------------------
 logs/
 *.log
 tmp/
 
+# ----------------------
 # Media Files
+# ----------------------
 *.mp4
 *.wav
 *.mp3
 audio_cache/
 recordings/
 
+# ----------------------
 # Database
+# ----------------------
 *.db
 *.sqlite3
 
-# OS
+# ----------------------
+# OS Files
+# ----------------------
 .DS_Store
 Thumbs.db
