@@ -34,9 +34,12 @@ env/
 .idea/
 
 # ----------------------
-# Code Review Graph
+# AI Assistant / Code Review
 # ----------------------
 .code-review-graph/
+.claude/
+AGENTS.md
+GEMINI.md
 
 # ----------------------
 # ML/NLP Models & Data
@@ -45,6 +48,10 @@ env/
 *.bin
 models/
 data/
+github_raw_data/
+transcripts/
+**/checkpoints/
+**/audio_data/
 
 # ----------------------
 # Logs & Temp
@@ -52,6 +59,9 @@ data/
 logs/
 *.log
 tmp/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # ----------------------
 # Media Files
@@ -73,3 +83,13 @@ recordings/
 # ----------------------
 .DS_Store
 Thumbs.db
+
+# ----------------------
+# Local App Data
+# ----------------------
+history.json
+history_section.png
+history_section.md
+labelling_guidelines.md
+raw_data_format.md
+Auto_export_notion.md

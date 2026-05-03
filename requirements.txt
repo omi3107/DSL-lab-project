@@ -18,7 +18,7 @@ seqeval
 jupyter
 numpy
 python-dotenv
-google-generativeai
+google-genai
 requests
 python-multipart
 aiofiles
@@ -28,3 +28,6 @@ pydantic-settings
 pydantic
 python-docx
 pdfplumber
+plotly
+networkx
+httpx
